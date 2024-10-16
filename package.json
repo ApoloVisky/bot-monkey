@@ -14,8 +14,9 @@
     "distube": "^5.0.2",
     "ffmpeg-static": "^5.2.0",
     "flatted": "^3.3.1",
-    "play-dl": "^1.9.7"
+    "play-dl": "^1.9.7",
+    "dotenv": "^16.0.3"
   },
-  "author": "",
+  "author": "Adeilton da Silva",
   "license": "ISC"
 }

@@ -34,8 +34,7 @@ const distube = new DisTube(client, {
       "-2",
       "-buffer_size",
       "10M",
-      "-preset",
-      "ultrafast",
+      
     ],
   },
 });
