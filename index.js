@@ -33,9 +33,9 @@ const distube = new DisTube(client, {
       "-strict",
       "-2",
       "-buffer_size",
-      "10M",
+      "5M",
       "-preset",
-      "ultrafast",
+      "superfast",
     ],
   },
 });
@@ -107,9 +107,23 @@ client.on("messageCreate", async (message) => {
 
     const duration = Date.now() - startTime;
     console.log(`Comando ${commandName} executado em ${duration}ms`);
+  } else if (commandName === "play" && args.length) {
+    const url = args[0];
+    try {
+      const video = await playdl.video_info(url);
+      if (video) {
+        distube.play(message.member.voice.channel, url, { member: message.member });
+        message.channel.send(`Tocando agora: **${video.title}**`);
+      } else {
+        message.channel.send("Não foi possível encontrar o vídeo.");
+      }
+    } catch (error) {
+      console.error("Erro ao tentar tocar a música:", error);
+      message.channel.send("Ocorreu um erro ao tentar tocar a música.");
+      sendErrorLog(`Erro ao tocar música: ${error.message}`);
+    }
   }
 });
-
 // Função para enviar logs de erro para o webhook
 async function sendErrorLog(error) {
   try {
@@ -129,6 +143,6 @@ setInterval(() => {
       cpuUsage.system / 1000
     } ms (system)`
   );
-}, 10000);
+}, 30000);
 
 client.login(process.env.DISCORD_TOKEN);
