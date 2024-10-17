@@ -6,16 +6,16 @@ require("dotenv").config();
 const fetch = require("node-fetch");
 const { fromJSON } = require("tough-cookie");
 const https = require("https");
-const HttpsProxyAgent = require('https-proxy-agent').default; // Corrigido aqui
 
+// Carregar cookies do arquivo JSON
 const cookiesJSON = fs.readFileSync('./cookies.json', 'utf-8');
 const cookieJar = fromJSON(cookiesJSON);
 
 console.log("Cookies carregados:", cookieJar);
 
-// Configure o agente de proxy
-const proxyUrl = 'http://177.54.229.125:9292';
-const agent = new HttpsProxyAgent(proxyUrl); // A instância do agente
+const agent = new https.Agent({
+  rejectUnauthorized: false,
+});
 
 const fetchWithCookies = async (url, options) => {
   try {
@@ -46,18 +46,13 @@ const client = new Client({
   ],
 });
 
-// Configurando o DisTube com o agente de proxy
+// Configurando o DisTube
 const distube = new DisTube(client, {
-  ytdlOptions: {
-    requestOptions: {
-      agent: agent, // Utilize o agente de proxy aqui
-    },
-    emitNewSongOnly: true,
-    plugins: [new YouTubePlugin()],
-    ffmpeg: {
-      encoder: "libopus",
-      args: ["-b:a", "60kbps"],
-    },
+  emitNewSongOnly: true,
+  plugins: [new YouTubePlugin()],
+  ffmpeg: {
+    encoder: "libopus",
+    args: ["-b:a", "60kbps"],
   },
 });
 
@@ -68,7 +63,7 @@ const loadCommands = () => {
 
   commandFiles.forEach(file => {
     const command = require(`./commands/${file}`);
-    if (command.data.name && typeof command.execute === "function") {
+    if (command.data && command.data.name && typeof command.execute === "function") {
       commands.set(command.data.name, command);
     } else {
       console.warn(`O comando ${file} está faltando "name" ou "execute".`);
