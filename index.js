@@ -83,11 +83,12 @@ client.on("interactionCreate", async (interaction) => {
 distube.on("playSong", (queue, song) => {
   if (!queue || !song) {
     console.log("Erro: Não foi possível obter a fila ou a música.");
+    console.log("Erro: Não foi possível obter a fila ou a música.");
     return;
   }
 
   console.log(`Tocando agora: ${song.name}`);
-  queue.textChannel?.send(`🎶 Tocando agora: **${song.name}**`);
+ // queue.textChannel?.send(`🎶 Tocando agora: **${song.name}**`);
 });
 
 
