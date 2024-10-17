@@ -1,15 +1,21 @@
 module.exports = {
     name: 'stop',
-    description: 'Para a música atual e limpa a fila.',
-    async execute(message, distube) {
-        const queue = distube.getQueue(message.guild.id);
+    description: 'Para a música e limpa a fila.',
+    async execute(interaction, distube) {
+      try {
+        const queue = distube.getQueue(interaction.guild.id);
+        
         if (!queue) {
-            console.log("Tentativa de parar a música, mas não há fila.");
-            return message.reply("Não há músicas na fila.");
+          return interaction.reply('Não há nenhuma música tocando no momento.');
         }
-
-        console.log(`Parando a música: ${queue.songs[0].name}`); 
-        await distube.stop(message.guild.id);
-        message.reply("Música parada e fila limpa.");
+  
+        distube.stop(interaction.guild.id);
+  
+        await interaction.reply('Música parada e fila limpa!');
+      } catch (error) {
+        console.error(error);
+        await interaction.reply('Ocorreu um erro ao tentar parar a música.');
+      }
     },
-};
+  };
+  

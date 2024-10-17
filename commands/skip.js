@@ -1,22 +1,36 @@
 module.exports = {
   name: "skip",
   description: "Pula a música atual.",
-  async execute(message, distube) {
-    const queue = distube.getQueue(message);
-    if (!queue) return message.reply("Não há músicas tocando.");
-
+  async execute(interaction, distube) {
     try {
-      if (queue.songs.length <= 1) {
-        return message.reply("Não há músicas para pular.");
+      const queue = distube.getQueue(interaction.guild.id);
+
+      
+      if (!queue) {
+        
+        return interaction.reply({
+          content: "Não há músicas na fila para pular.",
+          ephemeral: true,
+        });
       }
 
-      const skippedSong = await distube.skip(message);
-      message.channel.send(`Música pulada: **${skippedSong.name}**`);
+     
+      await distube.skip(interaction.guild.id);
+
+      const nextSong = queue.songs[0]; 
+
+     
+      await interaction.reply(`🎶 Música pulada! Agora tocando: **${nextSong.name}**`);
     } catch (error) {
-      console.error("Erro ao tentar pular a música:", error);
-      message.channel.send(
-        `Ocorreu um erro ao tentar pular a música: ${error.message}`
-      );
+      console.error("Erro ao executar o comando:", error);
+
+      
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({
+          content: "Houve um erro ao executar esse comando.",
+          ephemeral: true,
+        });
+      }
     }
   },
 };

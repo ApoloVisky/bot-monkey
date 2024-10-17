@@ -1,32 +1,41 @@
 module.exports = {
   name: "play",
-  description: "Toca uma música",
-  async execute(message, distube) {
-    const args = message.content.split(" ").slice(1);
-    const songName = args.join(" ");
-    if (!songName) return message.reply("Por favor, forneça o nome da música!");
-
+  description: "Toca uma música.",
+  async execute(interaction, distube) {
     try {
-      
-      const queue = await distube.play(
-        message.member.voice.channel,
-        songName,
-        {
-          textChannel: message.channel,
-          member: message.member,
-        }
-      );
+      const songName = interaction.options.getString("song");
+      const voiceChannel = interaction.member.voice.channel;
 
-    
-      if (!queue || !queue.songs || queue.songs.length === 0) {
-        return message.reply("Ocorreu um problema ao adicionar a música à fila.");
+   
+      if (!voiceChannel) {
+        return interaction.reply({
+          content: "Você precisa estar em um canal de voz para tocar música!",
+          ephemeral: true,
+        });
+      }
+
+ 
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ ephemeral: true });
       }
 
       
-      message.channel.send(`Tocando agora: **${queue.songs[0].name}**`);
+      await distube.play(voiceChannel, songName, {
+        textChannel: interaction.channel,
+        member: interaction.member,
+      });
+
+    
+      if (interaction.deferred) {
+        await interaction.editReply(`🎶 Tocando agora: **${songName}**`);
+      }
     } catch (error) {
-      console.error("Erro ao tentar tocar a música:", error);
-      message.channel.send("Ocorreu um erro ao tentar tocar a música.");
+      console.error("Erro ao executar o comando:", error);
+
+      
+      if (!interaction.replied) {
+        await interaction.editReply("Houve um erro ao tentar tocar a música.");
+      }
     }
   },
 };
