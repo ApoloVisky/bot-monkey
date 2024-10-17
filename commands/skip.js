@@ -1,21 +1,22 @@
 module.exports = {
-    name: 'skip',
-    description: 'Pula a música atual.',
-    async execute(message, distube) {
-        const queue = distube.getQueue(message.guild.id);
-        if (!queue) {
-            console.log("Tentativa de pular a música, mas não há fila.");
-            return message.reply("Não há músicas na fila.");
-        }
+  name: "skip",
+  description: "Pula a música atual.",
+  async execute(message, distube) {
+    const queue = distube.getQueue(message);
+    if (!queue) return message.reply("Não há músicas tocando.");
 
-        const currentSong = queue.songs[0];
-        console.log(`Pulando a música: ${currentSong.name}`);
-        await distube.skip(message.guild.id);
-        
-        if (queue.songs.length > 0) {
-            message.reply("Música pulada. Próxima música na fila.");
-        } else {
-            message.reply("Música pulada. Não há mais músicas na fila.");
-        }
-    },
+    try {
+      if (queue.songs.length <= 1) {
+        return message.reply("Não há músicas para pular.");
+      }
+
+      const skippedSong = await distube.skip(message);
+      message.channel.send(`Música pulada: **${skippedSong.name}**`);
+    } catch (error) {
+      console.error("Erro ao tentar pular a música:", error);
+      message.channel.send(
+        `Ocorreu um erro ao tentar pular a música: ${error.message}`
+      );
+    }
+  },
 };

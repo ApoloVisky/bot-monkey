@@ -1,11 +1,9 @@
 const { Client, GatewayIntentBits } = require("discord.js");
 const DisTube = require("distube").DisTube;
 const { YouTubePlugin } = require("@distube/youtube");
-const playdl = require("play-dl");
-require("dotenv").config();
 const axios = require("axios");
 const fs = require("fs");
-const { stringify } = require("flatted");
+require("dotenv").config();
 
 const client = new Client({
   intents: [
@@ -21,110 +19,127 @@ const distube = new DisTube(client, {
   plugins: [new YouTubePlugin()],
   ffmpeg: {
     encoder: "opus",
-    args: [
-      "-b:a",
-      "128k",
-      "-fflags",
-      "+nobuffer",
-      "-flags",
-      "+low_delay",
-      "-use_wallclock_as_timestamps",
-      "1",
-      "-strict",
-      "-2",
-      "-buffer_size",
-      "5M",
-      "-preset",
-      "superfast",
-    ],
+    args: ["-b:a", "60kbps", "-buffer_size", "80M"],
   },
 });
 
-distube.on("error", (queue, error) => {
-  console.error("Erro na fila:", error);
-  queue.textChannel.send("Ocorreu um erro na fila de músicas.");
-  sendErrorLog(`Erro na fila: ${error.message}`);
-});
-
-distube.setMaxListeners(20);
-
-const commands = new Map();
-const commandFiles = fs
-  .readdirSync("./commands")
-  .filter((file) => file.endsWith(".js"));
-
-for (const file of commandFiles) {
-  const command = require(`./commands/${file}`);
-  commands.set(command.name, command);
-}
+const commands = loadCommands("./commands");
 
 client.once("ready", () => {
   console.log(`Bot está online como ${client.user.tag}`);
 });
 
+let lastErrorTime = 0;
+const errorCooldown = 5000;
+
+client.on("messageCreate", async (message) => {
+  if (message.author.bot || !message.guild) return;
+
+  const [commandName, ...args] = message.content.split(" ");
+  const command = commands.get(commandName.substring(1));
+
+  if (commandName === "!play") {
+    await handlePlayCommand(message, args.join(" "));
+  } else if (commandName === "!stop") {
+    await handleStopCommand(message);
+  } else if (command) {
+    await command.execute(message, distube);
+  }
+});
+
+function loadCommands(directory) {
+  return fs
+    .readdirSync(directory)
+    .filter((file) => file.endsWith(".js"))
+    .reduce((acc, file) => {
+      const command = require(`${directory}/${file}`);
+      acc.set(command.name, command);
+      return acc;
+    }, new Map());
+}
+
+async function handlePlayCommand(message, songName) {
+  if (!message.member.voice.channel) {
+    return message.reply(
+      "Você precisa estar em um canal de voz para tocar músicas!"
+    );
+  }
+
+  if (!songName) return message.reply("Por favor, forneça o nome da música!");
+
+  try {
+    const queue = await distube.play(message.member.voice.channel, songName, {
+      textChannel: message.channel,
+      member: message.member,
+    });
+
+    if (queue) {
+      message.channel.send(`Tocando agora: **${queue.songs[0].name}**`);
+      console.log(`Tocando agora: ${queue.songs[0].name}`);
+    }
+  } catch (error) {
+    handleError(message, error);
+  }
+}
+
+async function handleStopCommand(message) {
+  const queue = distube.getQueue(message);
+  if (!queue) return message.reply("Não há músicas tocando.");
+
+  distube.stop(message);
+  message.channel.send("A música foi parada e o bot desconectou.");
+  console.log("A música foi parada e o bot desconectou.");
+}
+
+function handleError(message, error) {
+  const currentTime = Date.now();
+  if (currentTime - lastErrorTime >= errorCooldown) {
+    console.error("Erro ao tentar tocar a música:", error);
+    message.channel.send(`Ocorreu um erro: ${error.message}`);
+    sendErrorLog(error.message);
+    lastErrorTime = currentTime;
+  }
+}
+
+distube.on("error", (queue, error) => {
+  console.error("Erro na fila:", error);
+  if (isCriticalError(error)) {
+    queue?.textChannel?.send("Erro crítico na fila de músicas.");
+    sendErrorLog(error.message);
+  }
+});
+
 distube.on("playSong", (queue, song) => {
-  queue.textChannel.send(`Tocando agora: **${song.name}**`);
+  queue?.textChannel?.send(`Tocando agora: **${song.name}**`);
+  console.log(`Tocando agora: ${song.name}`);
 });
 
 distube.on("finishSong", (queue) => {
-  try {
-    const songList = queue.songs.map((song) => ({
-      name: song.name,
-      formattedDuration: song.formattedDuration,
-    }));
-
-    console.log(`Fila atual: ${stringify(songList)}`);
-  } catch (error) {
-    console.error("Erro ao serializar a fila:", error);
-    sendErrorLog(`Erro ao serializar a fila: ${error.message}`);
+  console.log(`Música terminada: ${queue.songs[0]?.name || "desconhecida"}`);
+  if (queue.songs.length > 0) {
+    queue.textChannel.send(`A música **${queue.songs[0].name}** terminou!`);
   }
 });
 
-distube.on("playSong", (song) => {
-  console.log(`Iniciando reprodução da música: ${song.name}`);
-});
-
-const removeErrorListeners = () => {
-  distube.removeAllListeners("error");
-  console.log("Todos os ouvintes de erro foram removidos.");
-};
-
-client.on("messageCreate", async (message) => {
-  const startTime = Date.now();
-
-  if (message.author.bot || !message.guild) return;
-
-  const args = message.content.split(" ").slice(1);
-  const commandName = message.content.split(" ")[0].substring(1);
-  const command = commands.get(commandName);
-
-  if (command) {
-    await command.execute(message, distube);
-
-    if (commandName === "clearListeners") {
-      removeErrorListeners();
-    }
-
-    const duration = Date.now() - startTime;
-    console.log(`Comando ${commandName} executado em ${duration}ms`);
-  } else if (commandName === "play" && args.length) {
-    const url = args[0];
-    try {
-      const video = await playdl.video_info(url);
-      if (video) {
-        distube.play(message.member.voice.channel, url, { member: message.member });
-        message.channel.send(`Tocando agora: **${video.title}**`);
-      } else {
-        message.channel.send("Não foi possível encontrar o vídeo.");
-      }
-    } catch (error) {
-      console.error("Erro ao tentar tocar a música:", error);
-      message.channel.send("Ocorreu um erro ao tentar tocar a música.");
-      sendErrorLog(`Erro ao tocar música: ${error.message}`);
-    }
+distube.on("finishQueue", async (queue) => {
+  if (queue?.textChannel) {
+    queue.textChannel.send(
+      "A fila de músicas acabou. O bot está saindo do canal de voz."
+    );
+    await queue.voice.channel.leave();
+    console.log("Desconectado do canal de voz.");
   }
 });
-// Função para enviar logs de erro para o webhook
+
+function isCriticalError(error) {
+  const criticalErrors = [
+    "VOICE_CONNECT_FAILED",
+    "NO_RESULT",
+    "PLAYBACK_ERROR",
+  ];
+  return criticalErrors.includes(error.errorCode);
+}
+
 async function sendErrorLog(error) {
   try {
     await axios.post(process.env.WEBHOOK_URL, { content: error });
@@ -132,17 +147,5 @@ async function sendErrorLog(error) {
     console.error("Erro ao enviar log para o webhook:", err);
   }
 }
-
-setInterval(() => {
-  const memoryUsage = process.memoryUsage();
-  const cpuUsage = process.cpuUsage();
-
-  console.log(`Uso de memória: ${memoryUsage.rss / 1024 / 1024} MB`);
-  console.log(
-    `Uso de CPU: ${cpuUsage.user / 1000} ms (user), ${
-      cpuUsage.system / 1000
-    } ms (system)`
-  );
-}, 30000);
 
 client.login(process.env.DISCORD_TOKEN);
