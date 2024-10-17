@@ -8,12 +8,12 @@ const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('
 
 for (const file of commandFiles) {
   const command = require(`./commands/${file}`);
-  
-  
-  if (!commands.some(cmd => cmd.name === command.name)) {
+
+
+  if (!commands.some(cmd => cmd.data.name === command.data.name)) {
     commands.push(command);
   } else {
-    console.warn(`Comando duplicado encontrado: ${command.name}. Removido da lista.`);
+    console.warn(`Comando duplicado encontrado: ${command.data.name}. Removido da lista.`);
   }
 }
 const rest = new REST({ version: '9' }).setToken(process.env.DISCORD_TOKEN);
@@ -23,11 +23,7 @@ const rest = new REST({ version: '9' }).setToken(process.env.DISCORD_TOKEN);
     console.log('Começando a registrar comandos de aplicação globalmente...');
 
     await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), {
-      body: commands.map(command => ({
-        name: command.name,
-        description: command.description,
-        options: command.options || [],
-      })),
+      body: commands.map(command => command.data.toJSON()),
     });
 
     console.log('Comandos registrados com sucesso globalmente!');

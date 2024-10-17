@@ -4,7 +4,6 @@ const { YouTubePlugin } = require("@distube/youtube");
 const fs = require("fs");
 require("dotenv").config();
 
-
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -14,16 +13,15 @@ const client = new Client({
   ],
 });
 
-
 const distube = new DisTube(client, {
   emitNewSongOnly: true,
   plugins: [new YouTubePlugin()],
   ffmpeg: {
+
     encoder: "opus",
-    args: ["-b:a", "128kbps", "-buffer_size", "80M"],
+    args: ["-b:a", "60kbps"],
   },
 });
-
 
 const loadCommands = () => {
   const commands = new Map();
@@ -31,13 +29,13 @@ const loadCommands = () => {
 
   commandFiles.forEach(file => {
     const command = require(`./commands/${file}`);
-    if (command.name && typeof command.execute === "function") {
-      commands.set(command.name, command);
+    if (command.data.name && typeof command.execute === "function") {
+      commands.set(command.data.name, command);
     } else {
       console.warn(`O comando ${file} está faltando "name" ou "execute".`);
     }
   });
-  
+
   return commands;
 };
 
@@ -47,7 +45,6 @@ client.once("ready", () => {
   console.log(`Bot está online como ${client.user.tag}`);
 });
 
-
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isCommand()) return;
 
@@ -55,30 +52,31 @@ client.on("interactionCreate", async (interaction) => {
 
   if (command) {
     try {
-  
-      if (!interaction.replied) {
+      if (!interaction.replied && !interaction.deferred) {
         await interaction.deferReply({ ephemeral: true });
       }
-      
-      
+
       await command.execute(interaction, distube);
 
-     
       if (!interaction.replied) {
         await interaction.editReply("Comando executado com sucesso!");
       }
     } catch (error) {
       console.error("Erro ao executar o comando:", error);
-      await interaction.editReply("Houve um erro ao executar esse comando.");
+
+      if (!interaction.replied) {
+        await interaction.editReply("Houve um erro ao executar esse comando.");
+      }
     }
   } else {
-    await interaction.reply({
-      content: "Comando não encontrado.",
-      ephemeral: true,
-    });
+    if (!interaction.replied) {
+      await interaction.reply({
+        content: "Comando não encontrado.",
+        ephemeral: true,
+      });
+    }
   }
 });
-
 
 distube.on("playSong", (queue, song) => {
   if (!queue || !song) {
@@ -90,7 +88,6 @@ distube.on("playSong", (queue, song) => {
   queue.textChannel?.send(`🎶 Tocando agora: **${song.name}**`);
 });
 
-
 distube.on("finishSong", (queue, song) => {
   if (!queue || !song) {
     console.log("Erro ao finalizar: Fila ou música indefinida.");
@@ -100,9 +97,9 @@ distube.on("finishSong", (queue, song) => {
   console.log(`Música terminada: ${song.name}`);
 });
 
+distube.on("error", (error) => {
+  console.error("Erro no DisTube:", error.message);
 
-distube.on("error", (channel, error) => {
-  console.error("Erro no DisTube:", error);
 });
 
 client.login(process.env.DISCORD_TOKEN);

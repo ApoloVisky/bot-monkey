@@ -1,9 +1,17 @@
-module.exports = {
-  name: 'leave',
-  description: 'Desconecta o bot do canal de voz.',
-  options: [],
+
+const CommandModel = require('../models/CommandModel')
+
+class LeaveCommand extends CommandModel {
+
+
+  constructor() {
+    super()
+
+    this.data.setName('leave')
+    this.data.setDescription('Desconecta o bot do canal de voz.')
+  }
+
   async execute(interaction, distube) {
-    // Deferir a resposta para evitar timeout
     await interaction.deferReply({ ephemeral: true });
 
     const queue = distube.getQueue(interaction.guild.id);
@@ -15,11 +23,13 @@ module.exports = {
       });
     }
 
-    // Deixa o canal de voz
     distube.voices.get(interaction.guild.id).leave();
     return interaction.followUp({
       content: "Desconectado do canal de voz.",
       ephemeral: true,
     });
-  },
-};
+  }
+}
+
+
+module.exports = new LeaveCommand();

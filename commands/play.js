@@ -1,41 +1,45 @@
-module.exports = {
-  name: "play",
-  description: "Toca uma música.",
+const CommandModel = require("../models/CommandModel");
+const { SlashCommandBuilder } = require('discord.js')
+
+class CommandPlay extends CommandModel {
+  constructor() {
+    super()
+
+    this.data = new SlashCommandBuilder()
+
+    this.data.setName("play");
+    this.data.setDescription('Toca uma música')
+
+    this.data.addStringOption((option) =>
+      option
+        .setName("url")
+        .setDescription("Busca a playlist ou música no YouTube")
+        .setRequired(true)
+    );
+  }
+
   async execute(interaction, distube) {
-    try {
-      const songName = interaction.options.getString("song");
-      const voiceChannel = interaction.member.voice.channel;
+    const url = interaction.options.getString("url");
 
-   
-      if (!voiceChannel) {
-        return interaction.reply({
-          content: "Você precisa estar em um canal de voz para tocar música!",
-          ephemeral: true,
-        });
-      }
+    if (!url) {
+      return interaction.editReply({
+        content: "Por favor, forneça uma URL ou nome da música.",
+        ephemeral: true,
+      });
+    }
 
- 
-      if (!interaction.deferred && !interaction.replied) {
-        await interaction.deferReply({ ephemeral: true });
-      }
-
-      
-      await distube.play(voiceChannel, songName, {
+    const queue = distube.getQueue(interaction.guildId);
+    if (!queue) {
+      await distube.play(interaction.member.voice.channel, url, {
         textChannel: interaction.channel,
         member: interaction.member,
       });
-
-    
-      if (interaction.deferred) {
-        await interaction.editReply(`🎶 Tocando agora: **${songName}**`);
-      }
-    } catch (error) {
-      console.error("Erro ao executar o comando:", error);
-
-      
-      if (!interaction.replied) {
-        await interaction.editReply("Houve um erro ao tentar tocar a música.");
-      }
+      return interaction.editReply(`🎶 Começando a tocar **${url}**!`);
+    } else {
+      await distube.play(interaction.member.voice.channel, url);
+      return interaction.editReply(`🎶 Adicionado **${url}** à fila!`);
     }
-  },
-};
+  }
+}
+
+module.exports = new CommandPlay();
