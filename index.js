@@ -1,30 +1,37 @@
 const { Client, GatewayIntentBits } = require("discord.js");
 const { DisTube } = require("distube");
 const { YouTubePlugin } = require("@distube/youtube");
+const { SpotifyPlugin } = require("@distube/spotify");
 const fs = require("fs");
 require("dotenv").config();
 const fetch = require("node-fetch");
 const { CookieJar } = require("tough-cookie");
-const FileCookieStore = require("tough-cookie-file-store").FileCookieStore;
+const { fromJSON } = require("tough-cookie");
 const https = require("https");
 
-const cookieStore = new FileCookieStore("./cookies.json");
-const cookieJar = new CookieJar(cookieStore);
+
+const cookiesJSON = fs.readFileSync('./cookies.json', 'utf-8');
+const cookieJar = fromJSON(cookiesJSON);
 
 console.log("Cookies carregados:", cookieJar);
 
 const agent = new https.Agent({
-  rejectUnauthorized: false, 
+  rejectUnauthorized: false,
 });
 
 const fetchWithCookies = async (url, options) => {
-  const response = await fetch(url, { ...options, agent, cookieJar });
-  const contentType = response.headers.get("content-type");
-  if (contentType && contentType.includes("application/json")) {
-    return response.json();
-  } else {
-    const text = await response.text();
-    throw new Error(`Resposta não é JSON: ${text}`);
+  try {
+    const response = await fetch(url, { ...options, agent, cookieJar });
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      return response.json();
+    } else {
+      const text = await response.text();
+      throw new Error(`Resposta não é JSON: ${text}`);
+    }
+  } catch (error) {
+    console.error(`Erro ao fazer a requisição para ${url}:`, error);
+    throw error;
   }
 };
 
@@ -42,13 +49,18 @@ const client = new Client({
 });
 
 const distube = new DisTube(client, {
-  emitNewSongOnly: true,
-  plugins: [new YouTubePlugin()],
-  ffmpeg: {
-    encoder: "libopus",
-    args: ["-b:a", "60kbps"],
-  },
-});
+  ytdlOptions: {
+    requestOptions: {
+      
+      agent: new require('https-proxy-agent')('http://177.54.229.125:9292'),
+
+      emitNewSongOnly: true,
+      plugins: [new YouTubePlugin()],
+      ffmpeg: {
+        encoder: "libopus",
+        args: ["-b:a", "60kbps"],
+      },
+    }}});
 
 const loadCommands = () => {
   const commands = new Map();

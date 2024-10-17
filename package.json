@@ -8,6 +8,7 @@
     "deploy": "node deploy-commands.js"
   },
   "dependencies": {
+    "@distube/spotify": "^2.0.2",
     "@distube/youtube": "^1.0.4",
     "@distube/ytdl-core": "^4.14.4",
     "axios": "^1.7.7",
@@ -20,6 +21,7 @@
     "libsodium-wrappers": "^0.7.15",
     "opusscript": "^0.0.8",
     "play-dl": "^1.9.7",
+    "puppeteer": "^23.6.0",
     "tough-cookie": "^5.0.0",
     "tough-cookie-file-store": "^2.0.3"
   },
