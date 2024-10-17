@@ -6,7 +6,7 @@ require("dotenv").config();
 const fetch = require("node-fetch");
 const { fromJSON } = require("tough-cookie");
 const https = require("https");
-const HttpsProxyAgent = require('https-proxy-agent');
+const HttpsProxyAgent = require('https-proxy-agent').default; // Corrigido aqui
 
 const cookiesJSON = fs.readFileSync('./cookies.json', 'utf-8');
 const cookieJar = fromJSON(cookiesJSON);
@@ -15,7 +15,7 @@ console.log("Cookies carregados:", cookieJar);
 
 // Configure o agente de proxy
 const proxyUrl = 'http://177.54.229.125:9292';
-const agent = new HttpsProxyAgent(proxyUrl);
+const agent = new HttpsProxyAgent(proxyUrl); // A instância do agente
 
 const fetchWithCookies = async (url, options) => {
   try {
