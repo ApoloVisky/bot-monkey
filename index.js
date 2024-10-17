@@ -103,7 +103,6 @@ distube.on("finishSong", (queue, song) => {
 
 distube.on("error", (channel, error) => {
   console.error("Erro no DisTube:", error);
-  if (channel) channel?.send("Ocorreu um erro ao tentar reproduzir a música.");
 });
 
 client.login(process.env.DISCORD_TOKEN);
