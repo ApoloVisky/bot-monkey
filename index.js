@@ -1,27 +1,25 @@
 const { Client, GatewayIntentBits } = require("discord.js");
 const { DisTube } = require("distube");
 const { YouTubePlugin } = require("@distube/youtube");
-const { SpotifyPlugin } = require("@distube/spotify");
 const fs = require("fs");
 require("dotenv").config();
 const fetch = require("node-fetch");
-const { CookieJar } = require("tough-cookie");
 const { fromJSON } = require("tough-cookie");
 const https = require("https");
-
+const HttpsProxyAgent = require('https-proxy-agent');
 
 const cookiesJSON = fs.readFileSync('./cookies.json', 'utf-8');
 const cookieJar = fromJSON(cookiesJSON);
 
 console.log("Cookies carregados:", cookieJar);
 
-const agent = new https.Agent({
-  rejectUnauthorized: false,
-});
+// Configure o agente de proxy
+const proxyUrl = 'http://177.54.229.125:9292';
+const agent = new HttpsProxyAgent(proxyUrl);
 
 const fetchWithCookies = async (url, options) => {
   try {
-    const response = await fetch(url, { ...options, agent, cookieJar });
+    const response = await fetch(url, { ...options, agent });
     const contentType = response.headers.get("content-type");
     if (contentType && contentType.includes("application/json")) {
       return response.json();
@@ -48,20 +46,22 @@ const client = new Client({
   ],
 });
 
+// Configurando o DisTube com o agente de proxy
 const distube = new DisTube(client, {
   ytdlOptions: {
     requestOptions: {
-      
-      agent: new require('https-proxy-agent')('http://177.54.229.125:9292'),
+      agent: agent, // Utilize o agente de proxy aqui
+    },
+    emitNewSongOnly: true,
+    plugins: [new YouTubePlugin()],
+    ffmpeg: {
+      encoder: "libopus",
+      args: ["-b:a", "60kbps"],
+    },
+  },
+});
 
-      emitNewSongOnly: true,
-      plugins: [new YouTubePlugin()],
-      ffmpeg: {
-        encoder: "libopus",
-        args: ["-b:a", "60kbps"],
-      },
-    }}});
-
+// Carregar comandos
 const loadCommands = () => {
   const commands = new Map();
   const commandFiles = fs.readdirSync("./commands").filter(file => file.endsWith(".js"));
