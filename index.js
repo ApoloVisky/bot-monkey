@@ -3,6 +3,34 @@ const { DisTube } = require("distube");
 const { YouTubePlugin } = require("@distube/youtube");
 const fs = require("fs");
 require("dotenv").config();
+const fetch = require("node-fetch");
+const { CookieJar } = require("tough-cookie");
+const FileCookieStore = require("tough-cookie-file-store").FileCookieStore;
+const https = require("https");
+
+const cookieStore = new FileCookieStore("./cookies.json");
+const cookieJar = new CookieJar(cookieStore);
+
+console.log("Cookies carregados:", cookieJar);
+
+const agent = new https.Agent({
+  rejectUnauthorized: false, 
+});
+
+const fetchWithCookies = async (url, options) => {
+  const response = await fetch(url, { ...options, agent, cookieJar });
+  const contentType = response.headers.get("content-type");
+  if (contentType && contentType.includes("application/json")) {
+    return response.json();
+  } else {
+    const text = await response.text();
+    throw new Error(`Resposta não é JSON: ${text}`);
+  }
+};
+
+fetchWithCookies("https://exemplo.com", { method: "GET" })
+  .then(data => console.log(data))
+  .catch(error => console.error("Erro na requisição:", error));
 
 const client = new Client({
   intents: [
@@ -17,8 +45,7 @@ const distube = new DisTube(client, {
   emitNewSongOnly: true,
   plugins: [new YouTubePlugin()],
   ffmpeg: {
-
-    encoder: "opus",
+    encoder: "libopus",
     args: ["-b:a", "60kbps"],
   },
 });
@@ -99,7 +126,6 @@ distube.on("finishSong", (queue, song) => {
 
 distube.on("error", (error) => {
   console.error("Erro no DisTube:", error.message);
-
 });
 
 client.login(process.env.DISCORD_TOKEN);

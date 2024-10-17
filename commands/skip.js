@@ -1,16 +1,12 @@
-
-const CommandModel = require('../models/CommandModel')
+const CommandModel = require('../models/CommandModel');
 
 class SkipCommand extends CommandModel {
-
-
   constructor() {
-    super()
+    super();
 
-    this.data.setName("skip")
-    this.data.setDescription("Pula a música atual.")
+    this.data.setName("skip");
+    this.data.setDescription("Pula a música atual.");
   }
-
 
   async execute(interaction, distube) {
     try {
@@ -35,13 +31,13 @@ class SkipCommand extends CommandModel {
       console.error("Erro ao executar o comando:", error);
 
       if (!interaction.replied) {
-        await interaction.editReply("Houve um erro ao executar esse comando.");
+        await interaction.editReply({
+          content: 'Houve um erro ao tentar pular a música.',
+          ephemeral: true,
+        });
       }
     }
   }
 }
 
-
 module.exports = new SkipCommand();
-
-
