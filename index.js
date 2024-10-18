@@ -5,17 +5,23 @@ const fs = require("fs");
 require("dotenv").config();
 const fetch = require("node-fetch");
 const { fromJSON } = require("tough-cookie");
-const https = require("https");
-
+const { HttpsProxyAgent } = require("https-proxy-agent");
+const ytdl = require("@distube/ytdl-core")
 
 const cookiesJSON = fs.readFileSync('./cookies.json', 'utf-8');
 const cookieJar = fromJSON(cookiesJSON);
 
 console.log("Cookies carregados:", cookieJar);
 
-const agent = new https.Agent({
-  rejectUnauthorized: false,
-});
+
+
+const proxy = {
+  host: 'ec2-54-233-2-72.sa-east-1.compute.amazonaws.com',
+  port: 8888,
+  protocol: 'http',
+};
+
+const agent = new HttpsProxyAgent(`${proxy.protocol}://${proxy.host}:${proxy.port}`);
 
 const fetchWithCookies = async (url, options) => {
   try {
@@ -46,14 +52,24 @@ const client = new Client({
   ],
 });
 
+
+
 const distube = new DisTube(client, {
   emitNewSongOnly: true,
   plugins: [new YouTubePlugin()],
   ffmpeg: {
-    encoder: "libopus", 
-    args: ["-b:a", "128k"], 
+    encoder: "opus", 
+    args: ["-b:a", "320k"], 
   },
 });
+
+const originalGetInfo = ytdl.getInfo;
+ytdl.getInfo = async (url, options) => {
+  options = options || {};
+  options.requestOptions = options.requestOptions || {};
+  options.requestOptions.client = agent;
+  return originalGetInfo(url, options);
+};
 
 
 const loadCommands = () => {
@@ -110,6 +126,7 @@ client.on("interactionCreate", async (interaction) => {
     }
   }
 });
+
 
 distube.on("playSong", (queue, song) => {
   if (!queue || !song) {
