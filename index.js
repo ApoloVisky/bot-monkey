@@ -65,20 +65,10 @@ const distube = new DisTube(client, {
   emitAddListWhenCreatingQueue: true,
   emitAddSongWhenCreatingQueue: true,
   ffmpeg: {
-    args: [
-      "-reconnect", "1",
-      "-reconnect_streamed", "1",
-      "-reconnect_delay_max", "5",
-      "-vn",
-      "-b:a", "192k",
-      "-ar", "48000",
-      "-ac", "2",
-      "-f", "s16le",
-      "-af", "aresample=async=1:min_hard_comp=0.100000:first_pts=0,volume=1.5",
-      "-bufsize", "64k"
-    ],
+    args: {},
   },
 });
+
 
 
 const originalGetInfo = ytdl.getInfo;
