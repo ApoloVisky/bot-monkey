@@ -5,16 +5,17 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "deploy": "node deploy-commands.js"
+    "deploy": "node deploy-commands.js",
+    "test": "jest"
   },
   "dependencies": {
+    "@discordjs/opus": "^0.9.0",
     "@discordjs/voice": "^0.17.0",
     "@distube/spotify": "^0.1.0",
-    "@distube/youtube": "^1.0.4",
     "@distube/ytdl-core": "^4.14.4",
+    "@jest/globals": "^29.7.0",
     "axios": "^1.7.7",
     "discord.js": "^14.16.3",
-    "distube": "^5.0.2",
     "dotenv": "^16.4.5",
     "ffmpeg-static": "^5.2.0",
     "flatted": "^3.3.1",
@@ -25,8 +26,14 @@
     "puppeteer": "^23.6.0",
     "sodium-native": "^4.2.1",
     "tough-cookie": "^5.0.0",
-    "tough-cookie-file-store": "^2.0.3"
+    "tough-cookie-file-store": "^2.0.3",
+    "youtube-sr": "^4.3.11",
+    "ytdl-core": "^4.11.5",
+    "ytsr": "^3.8.4"
   },
   "author": "Adeilton da Silva",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
 }
