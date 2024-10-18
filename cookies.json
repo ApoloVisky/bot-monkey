@@ -1,5 +1,5 @@
-[
-    {
+{
+   "cookies": [ {
       "domain": ".youtube.com",
       "expirationDate": 1761858994.610073,
       "hostOnly": false,
@@ -501,4 +501,5 @@
       "value": "AKEyXzWiNaVTqM4gmX0sYMQCBQjP8xa6xAjMhipHFlU1zMR9SE49lu8qT0aUk5c9fm0wLJPWoxc",
       "origin": "https://accounts.youtube.com"
     }
-  ]
+   ]
+}

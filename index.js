@@ -4,24 +4,30 @@ const { YouTubePlugin } = require("@distube/youtube");
 const fs = require("fs");
 require("dotenv").config();
 const fetch = require("node-fetch");
+const { CookieJar } = require("tough-cookie");
 const { fromJSON } = require("tough-cookie");
 const { HttpsProxyAgent } = require("https-proxy-agent");
-const ytdl = require("@distube/ytdl-core")
+const ytdl = require("@distube/ytdl-core");
 
+// Carregar cookies do arquivo JSON
 const cookiesJSON = fs.readFileSync('./cookies.json', 'utf-8');
-const cookieJar = fromJSON(cookiesJSON);
+const cookieJar = CookieJar.fromJSON(cookiesJSON);
 
 console.log("Cookies carregados:", cookieJar);
 
-
-
+// Configurar o proxy
 const proxy = {
   host: 'ec2-54-233-2-72.sa-east-1.compute.amazonaws.com',
   port: 8888,
   protocol: 'http',
 };
 
-const agent = new HttpsProxyAgent(`${proxy.protocol}://${proxy.host}:${proxy.port}`);
+const agent = new HttpsProxyAgent({
+  host: proxy.host,
+  port: proxy.port,
+  protocol: proxy.protocol,
+  rejectUnauthorized: false, 
+});
 
 const fetchWithCookies = async (url, options) => {
   try {
@@ -53,21 +59,44 @@ const client = new Client({
 });
 
 
-
 const distube = new DisTube(client, {
   emitNewSongOnly: true,
   plugins: [new YouTubePlugin()],
+  emitAddListWhenCreatingQueue: true,
+  emitAddSongWhenCreatingQueue: true,
   ffmpeg: {
-    encoder: "opus", 
-    args: ["-b:a", "320k"], 
+    args: [
+      "-reconnect", "1",
+      "-reconnect_streamed", "1",
+      "-reconnect_delay_max", "5",
+      "-vn",
+      "-b:a", "192k",
+      "-ar", "48000",
+      "-ac", "2",
+      "-f", "s16le",
+      "-af", "aresample=async=1:min_hard_comp=0.100000:first_pts=0,volume=1.5",
+      "-bufsize", "64k"
+    ],
   },
 });
+
 
 const originalGetInfo = ytdl.getInfo;
 ytdl.getInfo = async (url, options) => {
   options = options || {};
   options.requestOptions = options.requestOptions || {};
   options.requestOptions.client = agent;
+  options.requestOptions.headers = {
+    Cookie: await new Promise((resolve, reject) => {
+      cookieJar.getCookies(url, {}, (err, cookies) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(cookies.map(cookie => `${cookie.key}=${cookie.value}`).join('; '));
+        }
+      });
+    }),
+  };
   return originalGetInfo(url, options);
 };
 
@@ -78,7 +107,7 @@ const loadCommands = () => {
 
   commandFiles.forEach(file => {
     const command = require(`./commands/${file}`);
-    if (command.data && command.data.name && typeof command.execute === "function") {
+    if (command && command.data && typeof command.execute === "function") {
       commands.set(command.data.name, command);
     } else {
       console.warn(`O comando ${file} está faltando "name" ou "execute".`);
@@ -126,7 +155,6 @@ client.on("interactionCreate", async (interaction) => {
     }
   }
 });
-
 
 distube.on("playSong", (queue, song) => {
   if (!queue || !song) {
